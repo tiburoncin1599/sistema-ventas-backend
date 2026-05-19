@@ -208,7 +208,7 @@ export class PedidosController {
   @UseGuards(JwtAuthGuard)
   async facturaQR(@Param('id') id: string) {
     const baseUrl =
-      process.env.API_URL || `http://localhost:${process.env.PORT || 3001}`;
+      process.env.API_URL || 'https://web-production-c811d.up.railway.app';
     const pdfUrl = `${baseUrl}/pedidos/${id}/factura/pdf`;
     const qr = await QRCode.toDataURL(pdfUrl);
     return { qr, pdf_url: pdfUrl, pedido_id: id };

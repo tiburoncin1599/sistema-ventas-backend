@@ -9,13 +9,14 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads' });
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads',
+  });
 
-  const corsOrigin = process.env.CORS_ORIGIN || '*';
   app.enableCors({
-    origin: corsOrigin,
-    methods: 'GET,POST,PUT,DELETE',
-    credentials: corsOrigin !== '*',
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
   });
 
   app.useGlobalPipes(
@@ -26,7 +27,9 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector)),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Sistema Ventas API')
@@ -34,11 +37,14 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
+
   SwaggerModule.setup('api', app, document);
 
   await app.listen(process.env.PORT || 3001);
 }
+
 bootstrap().catch((error) => {
   console.error(error);
   process.exit(1);

@@ -1,10 +1,10 @@
-const http = require('http');
-const BASE = 'http://localhost:3001';
+const https = require('https');
+const BASE = 'https://web-production-c811d.up.railway.app';
 
 async function req(path, method, body, token) {
   return new Promise((resolve, reject) => {
     const opts = {
-      hostname: 'localhost', port: 3001, path, method,
+      hostname: 'web-production-c811d.up.railway.app', port: 443, path, method,
       headers: { 'Content-Type': 'application/json' },
     };
     if (token) opts.headers['Authorization'] = 'Bearer ' + token;

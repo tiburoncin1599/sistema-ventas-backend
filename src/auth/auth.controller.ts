@@ -21,7 +21,7 @@ export class AuthController {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL:
         process.env.GOOGLE_CALLBACK_URL ||
-        'http://localhost:3001/auth/google/callback',
+        'https://web-production-c811d.up.railway.app/auth/google/callback',
     };
   }
 
@@ -41,7 +41,7 @@ export class AuthController {
 
   @Get('google')
   googleAuth(@Res() res: Response) {
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sistema-ventas-frontend-tawny.vercel.app';
     if (!this.googleHabilitado) {
       return res.redirect(
         `${FRONTEND_URL}/auth?error=${encodeURIComponent('Google OAuth no configurado. Contactá al administrador.')}`,
@@ -61,7 +61,7 @@ export class AuthController {
 
   @Get('google/callback')
   async googleCallback(@Req() req: Request, @Res() res: Response) {
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sistema-ventas-frontend-tawny.vercel.app';
     const code = req.query.code as string;
     if (!code || !this.googleHabilitado) {
       return res.redirect(

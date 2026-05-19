@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
-const http = require('http');
+const https = require('https');
 
 const token = new Promise((resolve, reject) => {
-  const r = http.request({ hostname: 'localhost', port: 3001, path: '/auth/login', method: 'POST', headers: { 'Content-Type': 'application/json' } }, res => {
+  const r = https.request({ hostname: 'web-production-c811d.up.railway.app', port: 443, path: '/auth/login', method: 'POST', headers: { 'Content-Type': 'application/json' } }, res => {
     let d = '';
     res.on('data', c => d += c);
     res.on('end', () => { try { resolve(JSON.parse(d).token); } catch(e) { reject(e); } });
