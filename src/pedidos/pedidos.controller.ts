@@ -170,12 +170,12 @@ export class PedidosController {
         width: 170,
       });
       doc.text(String(d.cantidad), col2, y, { width: 50, align: 'center' });
-      doc.text(`$${Number(d.precio_unitario).toFixed(2)}`, col3, y, {
+      doc.text(`Bs${Number(d.precio_unitario).toFixed(2)}`, col3, y, {
         width: 100,
         align: 'right',
       });
       doc.text(
-        `$${(d.cantidad * Number(d.precio_unitario)).toFixed(2)}`,
+        `Bs${(d.cantidad * Number(d.precio_unitario)).toFixed(2)}`,
         col4,
         y,
         { width: 80, align: 'right' },
@@ -191,7 +191,7 @@ export class PedidosController {
     doc.fillColor('#005a24').font('Helvetica-Bold').fontSize(14);
     const totalY = doc.y;
     doc.text('TOTAL:', 40, totalY, { width: 100 });
-    doc.text(`$${Number(data.pedido.total).toFixed(2)}`, 440, totalY, {
+    doc.text(`Bs${Number(data.pedido.total).toFixed(2)}`, 440, totalY, {
       width: 100,
       align: 'right',
     });
