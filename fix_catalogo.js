@@ -32,7 +32,7 @@ const pool = new Pool({
     }
     const r = await pool.query('SELECT id, nombre, precio, precio_por_docena, tamano FROM productos ORDER BY id');
     console.log('Catalogo actualizado:');
-    r.rows.forEach(p => console.log(`  #${p.id} ${p.nombre} | $${p.precio} | docena: $${p.precio_por_docena} | ${p.tamano}`));
+    r.rows.forEach(p => console.log(`  #${p.id} ${p.nombre} | Bs${p.precio} | docena: Bs${p.precio_por_docena} | ${p.tamano}`));
   } catch (e) { console.log('ERROR:', e.message); }
   await pool.end();
 })();

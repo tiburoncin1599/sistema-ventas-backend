@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { Response } from 'express';
-import * as PDFDocument from 'pdfkit';
+import  PDFDocument from 'pdfkit';
 
 @Controller('deudas')
 export class DeudasController {
@@ -112,14 +112,14 @@ export class DeudasController {
       rightX = 400;
     doc.font('Helvetica').fontSize(10);
     doc.text('Monto total:', leftX, doc.y);
-    doc.text(`$${Number(deuda.monto).toFixed(2)}`, rightX, doc.y, {
+    doc.text(`Bs${Number(deuda.monto).toFixed(2)}`, rightX, doc.y, {
       width: 150,
       align: 'right',
     });
     doc.moveDown(0.5);
 
     doc.text('Monto pagado:', leftX, doc.y);
-    doc.text(`$${Number(deuda.monto_pagado).toFixed(2)}`, rightX, doc.y, {
+    doc.text(`Bs${Number(deuda.monto_pagado).toFixed(2)}`, rightX, doc.y, {
       width: 150,
       align: 'right',
     });
@@ -127,7 +127,7 @@ export class DeudasController {
 
     const saldo = deuda.monto - deuda.monto_pagado;
     doc.text('Saldo pendiente:', leftX, doc.y);
-    doc.text(`$${Number(saldo).toFixed(2)}`, rightX, doc.y, {
+    doc.text(`Bs${Number(saldo).toFixed(2)}`, rightX, doc.y, {
       width: 150,
       align: 'right',
     });

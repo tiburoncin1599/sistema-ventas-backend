@@ -22,7 +22,7 @@ import { Response } from 'express';
 import { join } from 'path';
 import * as fs from 'fs';
 import * as QRCode from 'qrcode';
-import * as PDFDocument from 'pdfkit';
+import  PDFDocument from 'pdfkit';
 
 @Controller('pedidos')
 export class PedidosController {
