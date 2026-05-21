@@ -75,7 +75,6 @@ export class DeudasController {
   }
 
   @Get(':id/factura/pdf')
-  @UseGuards(JwtAuthGuard)
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename=factura-deuda.pdf')
   async facturaPDF(@Param('id') id: string, @Res() res: Response) {

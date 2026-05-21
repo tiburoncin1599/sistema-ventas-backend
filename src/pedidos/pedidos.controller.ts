@@ -56,7 +56,6 @@ export class PedidosController {
   }
 
   @Get(':id/factura/pdf')
-  @UseGuards(JwtAuthGuard)
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename=factura.pdf')
   async facturaPDF(@Param('id') id: string, @Res() res: Response) {
@@ -205,7 +204,6 @@ export class PedidosController {
   }
 
   @Get(':id/factura/qr')
-  @UseGuards(JwtAuthGuard)
   async facturaQR(@Param('id') id: string) {
     const baseUrl =
       process.env.API_URL || 'https://web-production-c811d.up.railway.app';
