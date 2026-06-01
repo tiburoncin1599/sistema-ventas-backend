@@ -5,15 +5,28 @@ import {
   Body,
   Req,
   Res,
+  UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegistroDto } from './dto/registro.dto';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { Request, Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  private readonly REFRESH_COOKIE = 'refresh_token';
+  private readonly COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/auth',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 días
+  };
 
   private get googleConfig() {
     return {
@@ -29,14 +42,55 @@ export class AuthController {
     return !!(this.googleConfig.clientId && this.googleConfig.clientSecret);
   }
 
+  private setRefreshCookie(res: Response, refreshToken: string) {
+    res.cookie(this.REFRESH_COOKIE, refreshToken, this.COOKIE_OPTIONS);
+  }
+
+  private clearRefreshCookie(res: Response) {
+    res.clearCookie(this.REFRESH_COOKIE, { path: '/auth' });
+  }
+
   @Post('registro')
-  registro(@Body() body: RegistroDto) {
-    return this.authService.registro(body.nombre, body.email, body.password);
+  @Throttle({ short: { limit: 2, ttl: 60000 } })
+  async registro(@Body() body: RegistroDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.registro(body.nombre, body.email, body.password);
+    this.setRefreshCookie(res, result.refreshToken);
+    const { refreshToken, ...data } = result;
+    return data;
   }
 
   @Post('login')
-  login(@Body() body: LoginDto) {
-    return this.authService.login(body.email, body.password);
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
+  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.login(body.email, body.password);
+    this.setRefreshCookie(res, result.refreshToken);
+    const { refreshToken, ...data } = result;
+    return data;
+  }
+
+  @Post('refresh')
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies?.[this.REFRESH_COOKIE];
+    if (!refreshToken) {
+      const token = req.body?.refreshToken;
+      if (!token) throw new UnauthorizedException('Refresh token requerido');
+      const result = await this.authService.refresh(token);
+      this.setRefreshCookie(res, result.refreshToken);
+      const { refreshToken: rt, ...data } = result;
+      return data;
+    }
+    const result = await this.authService.refresh(refreshToken);
+    this.setRefreshCookie(res, result.refreshToken);
+    const { refreshToken: rt, ...data } = result;
+    return data;
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.user.id);
+    this.clearRefreshCookie(res);
+    return { message: 'Sesión cerrada correctamente' };
   }
 
   @Get('google')

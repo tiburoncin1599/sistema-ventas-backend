@@ -14,8 +14,12 @@ export class InventarioService {
     private inventarioRepo: Repository<Inventario>,
   ) {}
 
-  findAll() {
-    return this.inventarioRepo.find({ relations: ['producto', 'producto.categoria'] });
+  findAll(page = 1, limit = 50) {
+    return this.inventarioRepo.find({
+      relations: ['producto', 'producto.categoria'],
+      skip: (page - 1) * limit,
+      take: limit,
+    });
   }
 
   async findOne(productoId: number) {

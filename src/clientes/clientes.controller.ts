@@ -20,14 +20,14 @@ export class ClientesController {
   constructor(private readonly clientesService: ClientesService) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'ventas')
   @Get()
   findAll() {
     return this.clientesService.findAll();
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'ventas')
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.clientesService.findOne(+id);

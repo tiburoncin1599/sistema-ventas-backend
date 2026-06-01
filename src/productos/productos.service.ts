@@ -10,10 +10,12 @@ export class ProductosService {
     private productosRepo: Repository<Producto>,
   ) {}
 
-  findAll() {
+  findAll(page = 1, limit = 50) {
     return this.productosRepo.find({
       where: { activo: true },
       relations: ['categoria'],
+      skip: (page - 1) * limit,
+      take: limit,
     });
   }
 

@@ -2,12 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from './usuario.entity';
-
-function sinPassword(u: Usuario): Omit<Usuario, 'password_hash'> {
-  const { password_hash: _p, ...rest } = u;
-  void _p;
-  return rest;
-}
+import { omitPassword } from '../common/utils';
 
 @Injectable()
 export class UsuariosService {
@@ -16,15 +11,18 @@ export class UsuariosService {
     private usuariosRepo: Repository<Usuario>,
   ) {}
 
-  async findAll() {
-    const usuarios = await this.usuariosRepo.find();
-    return usuarios.map(sinPassword);
+  async findAll(page = 1, limit = 50) {
+    const usuarios = await this.usuariosRepo.find({
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return usuarios.map(omitPassword);
   }
 
   async findOne(id: number) {
     const usuario = await this.usuariosRepo.findOne({ where: { id } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-    return sinPassword(usuario);
+    return omitPassword(usuario);
   }
 
   findByEmail(email: string) {

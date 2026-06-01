@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { InventarioService } from './inventario.service';
 import { ActualizarInventarioDto } from './dto/actualizar-inventario.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -10,10 +10,8 @@ export class InventarioController {
   constructor(private readonly inventarioService: InventarioService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'inventario')
-  findAll() {
-    return this.inventarioService.findAll();
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.inventarioService.findAll(Number(page) || 1, Number(limit) || 50);
   }
 
   @Get('alertas')

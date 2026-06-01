@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   Res,
   Header,
@@ -25,14 +26,14 @@ export class DeudasController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'inventario')
-  findAll() {
-    return this.deudasService.findAll();
+  @Roles('admin', 'inventario', 'ventas')
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.deudasService.findAll(Number(page) || 1, Number(limit) || 50);
   }
 
   @Get('resumen')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'inventario')
+  @Roles('admin', 'inventario', 'ventas')
   resumen() {
     return this.deudasService.resumen();
   }

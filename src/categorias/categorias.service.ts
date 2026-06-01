@@ -10,8 +10,11 @@ export class CategoriasService {
     private categoriasRepo: Repository<Categoria>,
   ) {}
 
-  findAll() {
-    return this.categoriasRepo.find();
+  findAll(page = 1, limit = 50) {
+    return this.categoriasRepo.find({
+      skip: (page - 1) * limit,
+      take: limit,
+    });
   }
 
   async findOne(id: number) {

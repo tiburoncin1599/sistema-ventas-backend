@@ -7,12 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from '../usuarios/usuario.entity';
 import * as bcrypt from 'bcryptjs';
-
-function sinPassword(u: Usuario): Omit<Usuario, 'password_hash'> {
-  const { password_hash: _p, ...rest } = u;
-  void _p;
-  return rest;
-}
+import { omitPassword } from '../common/utils';
 
 @Injectable()
 export class ClientesService {
@@ -25,7 +20,7 @@ export class ClientesService {
     const clientes = await this.usuariosRepo.find({
       where: { rol: 'cliente', activo: true },
     });
-    return clientes.map(sinPassword);
+    return clientes.map(omitPassword);
   }
 
   async findOne(id: number) {
@@ -33,7 +28,7 @@ export class ClientesService {
       where: { id, rol: 'cliente' },
     });
     if (!cliente) throw new NotFoundException('Cliente no encontrado');
-    return sinPassword(cliente);
+    return omitPassword(cliente);
   }
 
   async crear(data: {
@@ -47,7 +42,8 @@ export class ClientesService {
     const existe = await this.usuariosRepo.findOne({ where: { email } });
     if (existe) throw new BadRequestException('El email ya está registrado');
 
-    const passDefault = 'cliente123';
+    const { randomBytes } = await import('crypto');
+    const passDefault = randomBytes(6).toString('hex');
     const hash = await bcrypt.hash(passDefault, 10);
     const usuario = this.usuariosRepo.create({
       nombre: data.nombre,
@@ -59,7 +55,7 @@ export class ClientesService {
       rol: 'cliente',
     });
     const saved = await this.usuariosRepo.save(usuario);
-    return sinPassword(saved);
+    return omitPassword(saved);
   }
 
   async actualizar(id: number, data: Partial<Usuario>) {

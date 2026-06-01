@@ -8,6 +8,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Pedido } from './pedido.entity';
 import { DetallePedido } from './detalle-pedido.entity';
 import { InventarioService } from '../inventario/inventario.service';
+import { InventarioMovimientosService } from '../inventario-movimientos/inventario-movimientos.service';
 
 interface ItemPedido {
   producto_id: number;
@@ -23,11 +24,42 @@ export class PedidosService {
     @InjectRepository(DetallePedido)
     private detalleRepo: Repository<DetallePedido>,
     private inventarioService: InventarioService,
+    private inventarioMovimientosService: InventarioMovimientosService,
     @InjectDataSource() private dataSource: DataSource,
   ) {}
 
-  findAll() {
+  findAll(page = 1, limit = 50) {
     return this.pedidosRepo.find({
+      relations: ['usuario', 'procesador'],
+      order: { creado_en: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+  }
+
+  findAllByEstado(estado: string, page = 1, limit = 50) {
+    return this.pedidosRepo.find({
+      where: { estado },
+      relations: ['usuario', 'procesador'],
+      order: { creado_en: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+  }
+
+  findAllByDateRange(desde?: Date, hasta?: Date) {
+    const where: any = {};
+    if (desde || hasta) {
+      where.creado_en = {};
+      if (desde) where.creado_en['>='] = desde;
+      if (hasta) {
+        const hastaFin = new Date(hasta);
+        hastaFin.setHours(23, 59, 59, 999);
+        where.creado_en['<='] = hastaFin;
+      }
+    }
+    return this.pedidosRepo.find({
+      where,
       relations: ['usuario', 'procesador'],
       order: { creado_en: 'DESC' },
     });
@@ -88,6 +120,13 @@ export class PedidosService {
 
       for (const item of items) {
         await this.inventarioService.descontar(item.producto_id, item.cantidad);
+        await this.inventarioMovimientosService.registrar({
+          producto_id: item.producto_id,
+          tipo: 'venta',
+          cantidad: item.cantidad,
+          referencia_tipo: 'pedido',
+          referencia_id: pedidoGuardado.id,
+        }).catch(() => {});
         const detalle = queryRunner.manager.create(DetallePedido, {
           pedido_id: pedidoGuardado.id,
           producto_id: item.producto_id,
@@ -117,8 +156,22 @@ export class PedidosService {
     });
   }
 
+  private readonly transiciones: Record<string, string[]> = {
+    pendiente: ['confirmado', 'cancelado'],
+    confirmado: ['enviado', 'cancelado'],
+    enviado: ['entregado', 'cancelado'],
+    entregado: [],
+    cancelado: [],
+  };
+
   async actualizarEstado(id: number, estado: string) {
-    await this.findOne(id);
+    const pedido = await this.findOne(id);
+    const permitidos = this.transiciones[pedido.estado];
+    if (!permitidos || !permitidos.includes(estado)) {
+      throw new BadRequestException(
+        `No se puede cambiar de "${pedido.estado}" a "${estado}". Transiciones permitidas: ${(permitidos || []).join(', ')}`,
+      );
+    }
     await this.pedidosRepo.update(id, { estado });
     return this.findOne(id);
   }
@@ -185,6 +238,14 @@ export class PedidosService {
         detalle.producto_id,
         detalle.cantidad,
       );
+      await this.inventarioMovimientosService.registrar({
+        producto_id: detalle.producto_id,
+        tipo: 'devolucion',
+        cantidad: detalle.cantidad,
+        referencia_tipo: 'pedido',
+        referencia_id: pedidoId,
+        motivo: 'Eliminación de item del pedido',
+      }).catch(() => {});
       await queryRunner.manager.delete(DetallePedido, itemId);
 
       const detalles = await this.findDetallesConManager(queryRunner.manager, pedidoId);
@@ -219,6 +280,14 @@ export class PedidosService {
           detalle.producto_id,
           detalle.cantidad,
         );
+        await this.inventarioMovimientosService.registrar({
+          producto_id: detalle.producto_id,
+          tipo: 'devolucion',
+          cantidad: detalle.cantidad,
+          referencia_tipo: 'pedido',
+          referencia_id: id,
+          motivo: 'Pedido eliminado',
+        }).catch(() => {});
       }
 
       await queryRunner.manager.delete(DetallePedido, { pedido_id: id });
@@ -285,5 +354,29 @@ export class PedidosService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async ventasPersonal(desde?: Date, hasta?: Date) {
+    const query = this.pedidosRepo
+      .createQueryBuilder('pedido')
+      .leftJoinAndSelect('pedido.procesador', 'procesador')
+      .select('pedido.procesado_por', 'usuario_id')
+      .addSelect('procesador.nombre', 'usuario_nombre')
+      .addSelect('COUNT(pedido.id)', 'total_pedidos')
+      .addSelect('SUM(pedido.total)', 'total_vendido')
+      .where('pedido.procesado_por IS NOT NULL');
+
+    if (desde) query.andWhere('pedido.creado_en >= :desde', { desde });
+    if (hasta) {
+      const hastaFin = new Date(hasta);
+      hastaFin.setHours(23, 59, 59, 999);
+      query.andWhere('pedido.creado_en <= :hasta', { hasta: hastaFin });
+    }
+
+    return query
+      .groupBy('pedido.procesado_por')
+      .addGroupBy('procesador.nombre')
+      .orderBy('total_vendido', 'DESC')
+      .getRawMany();
   }
 }

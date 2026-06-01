@@ -14,8 +14,28 @@ export class DeudasService {
     private deudasRepo: Repository<Deuda>,
   ) {}
 
-  findAll() {
+  findAll(page = 1, limit = 50) {
     return this.deudasRepo.find({
+      relations: ['usuario'],
+      order: { fecha_creacion: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+  }
+
+  findAllByDateRange(desde?: Date, hasta?: Date) {
+    const where: any = {};
+    if (desde || hasta) {
+      where.fecha_creacion = {};
+      if (desde) where.fecha_creacion['>='] = desde;
+      if (hasta) {
+        const hastaFin = new Date(hasta);
+        hastaFin.setHours(23, 59, 59, 999);
+        where.fecha_creacion['<='] = hastaFin;
+      }
+    }
+    return this.deudasRepo.find({
+      where,
       relations: ['usuario'],
       order: { fecha_creacion: 'DESC' },
     });

@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import * as bcrypt from 'bcryptjs';
+import { omitPassword } from '../common/utils';
 
 @Controller('usuarios')
 export class UsuariosController {
@@ -24,8 +26,8 @@ export class UsuariosController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  findAll() {
-    return this.usuariosService.findAll();
+  async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.usuariosService.findAll(Number(page) || 1, Number(limit) || 50);
   }
 
   @Get(':id')
@@ -34,15 +36,19 @@ export class UsuariosController {
     return this.usuariosService.findOne(+id);
   }
 
+  private get adminEmails(): string[] {
+    return (process.env.ADMIN_EMAILS || 'aaas@gmail.com').split(',');
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async crear(@Body() body: CrearUsuarioDto) {
     const existe = await this.usuariosService.findByEmail(body.email);
     if (existe) throw new BadRequestException('El email ya está registrado');
-    if (body.rol === 'admin' && body.email !== 'aaas@gmail.com') {
+    if (body.rol === 'admin' && !this.adminEmails.includes(body.email)) {
       throw new BadRequestException(
-        'Solo aaas@gmail.com puede tener el rol de administrador',
+        'Email no autorizado para el rol de administrador',
       );
     }
     const hash = await bcrypt.hash(body.password, 10);
@@ -52,8 +58,7 @@ export class UsuariosController {
       password_hash: hash,
       rol: body.rol || 'cliente',
     });
-    const { password_hash: _p, ...result } = usuario;
-    void _p;
+    const result = omitPassword(usuario);
     return result;
   }
 
@@ -65,13 +70,13 @@ export class UsuariosController {
     @Body() body: ActualizarUsuarioDto,
   ) {
     const usuario = await this.usuariosService.findOne(+id);
-    if (body.rol === 'admin' && usuario.email !== 'aaas@gmail.com') {
+    if (body.rol === 'admin' && !this.adminEmails.includes(usuario.email)) {
       throw new BadRequestException(
-        'Solo aaas@gmail.com puede tener el rol de administrador',
+        'Email no autorizado para el rol de administrador',
       );
     }
     if (
-      usuario.email === 'aaas@gmail.com' &&
+      this.adminEmails.includes(usuario.email) &&
       body.rol &&
       body.rol !== 'admin'
     ) {
@@ -94,7 +99,7 @@ export class UsuariosController {
   @Roles('admin')
   async eliminar(@Param('id') id: string) {
     const usuario = await this.usuariosService.findOne(+id);
-    if (usuario.email === 'aaas@gmail.com') {
+    if (this.adminEmails.includes(usuario.email)) {
       throw new BadRequestException('No se puede eliminar al administrador principal');
     }
     await this.usuariosService.eliminar(+id);

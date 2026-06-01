@@ -18,6 +18,15 @@ export class CrearProductoDto {
   precio_costo?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  precio_por_docena?: number;
+
+  @IsOptional()
+  @IsString()
+  tamano?: string;
+
+  @IsOptional()
   @IsString()
   imagen_url?: string;
 

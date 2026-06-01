@@ -6,11 +6,11 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
-  HttpCode,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -27,8 +27,8 @@ export class ProductosController {
   constructor(private readonly productosService: ProductosService) {}
 
   @Get()
-  findAll() {
-    return this.productosService.findAll();
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.productosService.findAll(Number(page) || 1, Number(limit) || 50);
   }
 
   @Get(':id')
@@ -55,36 +55,6 @@ export class ProductosController {
   @Roles('admin', 'inventario')
   desactivar(@Param('id') id: string) {
     return this.productosService.desactivar(+id);
-  }
-
-  @Post('fix-imagenes')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @HttpCode(200)
-  async fixImagenes() {
-    const productos = await this.productosService.findAllInclusoInactivos();
-    const actualizados: { id: number; old: string; new: string }[] = [];
-    for (const p of productos) {
-      if (!p.imagen_url) continue;
-      const oldUrl = p.imagen_url;
-      let newUrl = oldUrl.replace(/\.jpg$/i, '.png');
-      newUrl = newUrl
-        .replace(/ gatillo /g, '_gatillo_')
-        .replace(/ recarga /g, '_recarga_')
-        .replace(/-gatillo-/g, '_gatillo_')
-        .replace(/-recarga-/g, '_recarga_')
-        .replace(/ gatillo\./g, '_gatillo.')
-        .replace(/ recarga\./g, '_recarga.');
-      if (newUrl !== oldUrl) {
-        await this.productosService.actualizar(p.id, { imagen_url: newUrl });
-        actualizados.push({ id: p.id, old: oldUrl, new: newUrl });
-      }
-    }
-    return {
-      message: 'Imágenes actualizadas',
-      count: actualizados.length,
-      actualizados,
-    };
   }
 
   @Post('upload/:id')

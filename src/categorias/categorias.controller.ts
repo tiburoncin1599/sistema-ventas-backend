@@ -5,6 +5,7 @@ import {
   Put,
   Param,
   Body,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CategoriasService } from './categorias.service';
@@ -19,8 +20,8 @@ export class CategoriasController {
   constructor(private readonly categoriasService: CategoriasService) {}
 
   @Get()
-  findAll() {
-    return this.categoriasService.findAll();
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.categoriasService.findAll(Number(page) || 1, Number(limit) || 50);
   }
 
   @Get(':id')
