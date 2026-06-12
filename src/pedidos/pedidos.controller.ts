@@ -9,7 +9,6 @@ import {
   Query,
   UseGuards,
   Res,
-  Header,
   Req,
   ForbiddenException,
 } from '@nestjs/common';
@@ -73,23 +72,37 @@ export class PedidosController {
   }
 
   @Get(':id/factura/pdf')
-  @Header('Content-Type', 'application/pdf')
-  @Header('Content-Disposition', 'attachment; filename=factura.pdf')
   async facturaPDF(@Param('id') id: string, @Res() res: Response) {
-    const data = await this.pedidosService.findFactura(+id);
-    const configuracion = await this.configuracionService.obtener();
-    await this.facturaService.generarFacturaPDF(
-      { ...data, configuracion },
-      res,
-    );
+    try {
+      const data = await this.pedidosService.findFactura(+id);
+      const configuracion = await this.configuracionService.obtener();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=factura-${id}.pdf`);
+      await this.facturaService.generarFacturaPDF(
+        { ...data, configuracion },
+        res,
+      );
+    } catch (err) {
+      if (!res.headersSent) {
+        console.error('Error generando factura PDF:', (err as Error).message);
+        res.status(500).json({
+          statusCode: 500,
+          message: 'Error al generar la factura PDF',
+          error: (err as Error).message,
+        });
+      }
+    }
   }
 
   @Get(':id/factura/qr')
   @UseGuards(JwtAuthGuard)
-  async facturaQR(@Param('id') id: string) {
+  async facturaQR(@Param('id') id: string, @Req() req: Request) {
     const baseUrl =
       process.env.API_URL || 'https://web-production-c811d.up.railway.app';
-    const pdfUrl = `${baseUrl}/pedidos/${id}/factura/pdf`;
+    const token = req.headers.authorization?.replace('Bearer ', '') || '';
+    const pdfUrl = token
+      ? `${baseUrl}/pedidos/${id}/factura/pdf?token=${encodeURIComponent(token)}`
+      : `${baseUrl}/pedidos/${id}/factura/pdf`;
     const qr = await QRCode.toDataURL(pdfUrl);
     return { qr, pdf_url: pdfUrl, pedido_id: id };
   }

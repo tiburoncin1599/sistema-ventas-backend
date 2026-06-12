@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { join } from 'path';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
 
 @Injectable()
 export class FacturaService {
@@ -57,10 +57,13 @@ export class FacturaService {
     doc.moveDown(2);
 
     // Watermark logo
-    const logoPath = join(__dirname, '..', '..', '..', 'logo.png');
-    if (existsSync(logoPath)) {
+    const watermarkPath =
+      cfg.logo_url && existsSync(cfg.logo_url)
+        ? cfg.logo_url
+        : join(__dirname, '..', '..', '..', 'logo.png');
+    if (existsSync(watermarkPath)) {
       doc.opacity(0.08);
-      doc.image(logoPath, 100, 250, { width: 400, height: 400 });
+      doc.image(watermarkPath, 100, 250, { width: 400, height: 400 });
       doc.opacity(1);
     }
 
