@@ -42,6 +42,7 @@ import { POSModule } from './pos/pos.module';
       ssl: { rejectUnauthorized: false },
       autoLoadEntities: true,
       synchronize: false,
+      migrations: [__dirname + '/migrations/*{.ts,.js}'],
     }),
     AuthModule,
     UsuariosModule,
