@@ -82,6 +82,7 @@ export class PedidosController {
       });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=factura-${id}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length.toString());
       res.end(pdfBuffer);
     } catch (err) {
       console.error('Error generando factura PDF:', (err as Error).message);

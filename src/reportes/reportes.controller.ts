@@ -12,7 +12,30 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import PDFDocument from 'pdfkit';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+
+let logoBuffer: Buffer | null = null;
+
+(() => {
+  const candidates = [
+    join(__dirname, '..', '..', 'logo.png'),
+    join(__dirname, '..', '..', '..', 'frontend-web', 'public', 'logo.jpg'),
+    join(__dirname, '..', '..', '..', 'frontend-web', 'public', 'logo.png'),
+    join(__dirname, '..', '..', '..', 'logo.png'),
+  ];
+  for (const fp of candidates) {
+    try {
+      if (existsSync(fp)) {
+        logoBuffer = readFileSync(fp);
+        console.log('[ReportesController] Logo cargado desde:', fp);
+        break;
+      }
+    } catch {}
+  }
+  if (!logoBuffer) {
+    console.warn('[ReportesController] No se encontró ningún archivo de logo para la marca de agua');
+  }
+})();
 
 @Controller('reportes')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -121,9 +144,12 @@ export class ReportesController {
       const wmX = (pageW - wmWidth) / 2;
       const wmY = (pageH - wmWidth) / 2;
       doc.opacity(0.12);
-      const logoFile = join(__dirname, '..', '..', 'logo.png');
-      if (existsSync(logoFile)) {
-        try { doc.image(logoFile, wmX, wmY, { width: wmWidth }); } catch {}
+      if (logoBuffer) {
+        try {
+          doc.image(logoBuffer, wmX, wmY, { width: wmWidth });
+        } catch (err) {
+          console.error('[watermark] Error al dibujar logo:', err);
+        }
       }
       doc.opacity(1);
       doc.y = savedY;

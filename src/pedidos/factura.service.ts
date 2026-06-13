@@ -1,7 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+
+let logoBuffer: Buffer | null = null;
+
+(() => {
+  const candidates = [
+    join(__dirname, '..', '..', 'logo.png'),
+    join(__dirname, '..', '..', '..', 'frontend-web', 'public', 'logo.jpg'),
+    join(__dirname, '..', '..', '..', 'frontend-web', 'public', 'logo.png'),
+    join(__dirname, '..', '..', '..', 'logo.png'),
+  ];
+  for (const fp of candidates) {
+    try {
+      if (existsSync(fp)) {
+        logoBuffer = readFileSync(fp);
+        console.log('[FacturaService] Logo cargado desde:', fp);
+        break;
+      }
+    } catch {}
+  }
+  if (!logoBuffer) {
+    console.warn('[FacturaService] No se encontró ningún archivo de logo para la marca de agua');
+  }
+})();
 
 @Injectable()
 export class FacturaService {
@@ -40,15 +63,12 @@ export class FacturaService {
           const wmY = (pageH - wmWidth) / 2;
 
           doc.opacity(0.12);
-          let logoFile = cfg.logo_url && existsSync(cfg.logo_url) ? cfg.logo_url : null;
-          if (!logoFile) {
-            const fallback = join(__dirname, '..', '..', 'logo.png');
-            if (existsSync(fallback)) logoFile = fallback;
-          }
-          if (logoFile) {
+          if (logoBuffer) {
             try {
-              doc.image(logoFile, wmX, wmY, { width: wmWidth });
-            } catch {}
+              doc.image(logoBuffer, wmX, wmY, { width: wmWidth });
+            } catch (err) {
+              console.error('[watermark] Error al dibujar logo:', err);
+            }
           } else {
             doc.font('Helvetica-Bold').fontSize(60).fillColor('#000')
               .text(empresa, 0, wmY, { align: 'center' });
