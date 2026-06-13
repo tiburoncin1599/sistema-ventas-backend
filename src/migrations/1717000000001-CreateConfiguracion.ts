@@ -28,7 +28,7 @@ export class CreateConfiguracion1717000000001 implements MigrationInterface {
 
     await queryRunner.query(`
       INSERT INTO "configuracion" ("id", "nombre_empresa", "moneda")
-      VALUES (1, 'Mi Empresa', 'Bs')
+      VALUES (1, 'SUPER ACTIVO', 'Bs')
       ON CONFLICT ("id") DO NOTHING
     `);
   }
