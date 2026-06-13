@@ -30,6 +30,36 @@ export class FacturaService {
         const green = '#005a24';
         const gray = '#666';
 
+        // Watermark — behind all content on every page
+        const drawWatermark = () => {
+          const savedY = doc.y;
+          const pageW = doc.page.width;
+          const pageH = doc.page.height;
+          const wmWidth = pageW * 0.60;
+          const wmX = (pageW - wmWidth) / 2;
+          const wmY = (pageH - wmWidth) / 2;
+
+          doc.opacity(0.12);
+          let logoFile = cfg.logo_url && existsSync(cfg.logo_url) ? cfg.logo_url : null;
+          if (!logoFile) {
+            const fallback = join(__dirname, '..', '..', 'logo.png');
+            if (existsSync(fallback)) logoFile = fallback;
+          }
+          if (logoFile) {
+            try {
+              doc.image(logoFile, wmX, wmY, { width: wmWidth });
+            } catch {}
+          } else {
+            doc.font('Helvetica-Bold').fontSize(60).fillColor('#000')
+              .text(empresa, 0, wmY, { align: 'center' });
+          }
+          doc.opacity(1);
+          doc.y = savedY;
+        };
+
+        drawWatermark();
+        doc.on('pageAdded', () => { drawWatermark(); });
+
         // Logo
         if (cfg.logo_url && existsSync(cfg.logo_url)) {
           try {
@@ -59,20 +89,6 @@ export class FacturaService {
         }
 
         doc.moveDown(2);
-
-        // Watermark
-        doc.opacity(0.08);
-        let logoFile = cfg.logo_url && existsSync(cfg.logo_url) ? cfg.logo_url : null;
-        if (!logoFile) {
-          const fallback = join(__dirname, '..', '..', 'logo.png');
-          if (existsSync(fallback)) logoFile = fallback;
-        }
-        if (logoFile) {
-          doc.image(logoFile, 100, 250, { width: 400, height: 400 });
-        } else {
-          doc.font('Helvetica-Bold').fontSize(60).fillColor('#000').text(empresa, 40, 250, { align: 'center' });
-        }
-        doc.opacity(1);
 
         // Separator
         doc.strokeColor(green).lineWidth(1);

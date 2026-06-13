@@ -11,6 +11,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import PDFDocument from 'pdfkit';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 @Controller('reportes')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -110,6 +112,24 @@ export class ReportesController {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${tipo}-${Date.now()}.pdf"`);
     doc.pipe(res);
+
+    const drawWatermark = () => {
+      const savedY = doc.y;
+      const pageW = doc.page.width;
+      const pageH = doc.page.height;
+      const wmWidth = pageW * 0.60;
+      const wmX = (pageW - wmWidth) / 2;
+      const wmY = (pageH - wmWidth) / 2;
+      doc.opacity(0.12);
+      const logoFile = join(__dirname, '..', '..', 'logo.png');
+      if (existsSync(logoFile)) {
+        try { doc.image(logoFile, wmX, wmY, { width: wmWidth }); } catch {}
+      }
+      doc.opacity(1);
+      doc.y = savedY;
+    };
+    drawWatermark();
+    doc.on('pageAdded', () => { drawWatermark(); });
 
     doc.fontSize(18).text(titulo, { align: 'center' });
     doc.moveDown();

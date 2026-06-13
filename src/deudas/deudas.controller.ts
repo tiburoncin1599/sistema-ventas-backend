@@ -18,7 +18,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { Response } from 'express';
-import  PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 @Controller('deudas')
 export class DeudasController {
@@ -82,6 +84,24 @@ export class DeudasController {
     const deuda = await this.deudasService.findOne(+id);
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
     doc.pipe(res);
+
+    const drawWatermark = () => {
+      const savedY = doc.y;
+      const pageW = doc.page.width;
+      const pageH = doc.page.height;
+      const wmWidth = pageW * 0.60;
+      const wmX = (pageW - wmWidth) / 2;
+      const wmY = (pageH - wmWidth) / 2;
+      doc.opacity(0.12);
+      const logoFile = join(__dirname, '..', '..', 'logo.png');
+      if (existsSync(logoFile)) {
+        try { doc.image(logoFile, wmX, wmY, { width: wmWidth }); } catch {}
+      }
+      doc.opacity(1);
+      doc.y = savedY;
+    };
+    drawWatermark();
+    doc.on('pageAdded', () => { drawWatermark(); });
 
     doc
       .fontSize(22)
