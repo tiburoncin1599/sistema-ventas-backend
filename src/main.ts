@@ -7,7 +7,7 @@ import { AppModule } from './app.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
 import { AuditService } from './audit/audit.service';
 import { join } from 'path';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
