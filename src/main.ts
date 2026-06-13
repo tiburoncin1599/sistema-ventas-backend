@@ -8,9 +8,13 @@ import { AuditInterceptor } from './audit/audit.interceptor';
 import { AuditService } from './audit/audit.service';
 import { join } from 'path';
 import cookieParser from 'cookie-parser';
+import { DataSource } from 'typeorm';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  const dataSource = app.get(DataSource);
+  await dataSource.runMigrations();
 
   app.use(cookieParser());
 
