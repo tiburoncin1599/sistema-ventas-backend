@@ -7,6 +7,7 @@ RUN npm ci
 
 COPY . .
 RUN npm run build
+RUN mkdir -p /app/uploads
 
 FROM node:18-alpine AS production
 
@@ -18,11 +19,8 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/uploads ./uploads 2>/dev/null || true
+COPY --from=build /app/uploads ./uploads
 
 EXPOSE 3001
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
 
 CMD ["node", "dist/main"]
