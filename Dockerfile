@@ -20,6 +20,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/uploads ./uploads
+COPY --from=build /app/assets ./assets
 
 EXPOSE 3001
 
