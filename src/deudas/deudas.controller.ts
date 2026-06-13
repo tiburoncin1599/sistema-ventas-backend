@@ -23,26 +23,48 @@ import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
 
 let logoBuffer: Buffer | null = null;
+let logoWidth = 0;
+let logoHeight = 0;
+
+function readImageSize(buf: Buffer): { width: number; height: number } | null {
+  try {
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+      return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+    }
+    if (buf[0] === 0xff && buf[1] === 0xd8) {
+      let i = 2;
+      while (i < buf.length) {
+        if (buf[i] !== 0xff) { i++; continue; }
+        if (buf[i + 1] === 0xc0 || buf[i + 1] === 0xc2) {
+          return { height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) };
+        }
+        i += 2 + buf.readUInt16BE(i + 2);
+      }
+    }
+  } catch {}
+  return null;
+}
 
 (() => {
+  const cwd = process.cwd();
   const candidates = [
-    join(__dirname, '..', '..', 'logo.png'),
-    join(__dirname, '..', '..', '..', 'frontend-web', 'public', 'logo.jpg'),
-    join(__dirname, '..', '..', '..', 'frontend-web', 'public', 'logo.png'),
-    join(__dirname, '..', '..', '..', 'logo.png'),
+    { path: join(cwd, 'assets', 'logo.jpg'), label: 'assets/logo.jpg' },
+    { path: join(cwd, 'assets', 'logo.png'), label: 'assets/logo.png' },
   ];
-  for (const fp of candidates) {
+  for (const { path: fp, label } of candidates) {
     try {
       if (existsSync(fp)) {
         logoBuffer = readFileSync(fp);
-        console.log('[DeudasController] Logo cargado desde:', fp);
+        const dim = readImageSize(logoBuffer);
+        if (dim) { logoWidth = dim.width; logoHeight = dim.height; }
+        console.log('[Deudas] Logo cargado:', label, logoBuffer.length, 'bytes', dim ? `${dim.width}x${dim.height}` : '');
         break;
       }
-    } catch {}
+    } catch (err) {
+      console.error('[Deudas] Error leyendo', fp, ':', err);
+    }
   }
-  if (!logoBuffer) {
-    console.warn('[DeudasController] No se encontró ningún archivo de logo para la marca de agua');
-  }
+  if (!logoBuffer) console.warn('[Deudas] No se encontró logo para marca de agua');
 })();
 
 @Controller('deudas')
@@ -114,16 +136,18 @@ export class DeudasController {
       const pageH = doc.page.height;
       const wmWidth = pageW * 0.60;
       const wmX = (pageW - wmWidth) / 2;
-      const wmY = (pageH - wmWidth) / 2;
+
+      doc.save();
       doc.opacity(0.12);
-      if (logoBuffer) {
-        try {
-          doc.image(logoBuffer, wmX, wmY, { width: wmWidth });
-        } catch (err) {
-          console.error('[watermark] Error al dibujar logo:', err);
-        }
+
+      if (logoBuffer && logoHeight > 0 && logoWidth > 0) {
+        const wmHeight = wmWidth * (logoHeight / logoWidth);
+        doc.image(logoBuffer, wmX, (pageH - wmHeight) / 2, { width: wmWidth });
+      } else if (logoBuffer) {
+        doc.image(logoBuffer, wmX, (pageH - wmWidth) / 2, { width: wmWidth });
       }
-      doc.opacity(1);
+
+      doc.restore();
       doc.y = savedY;
     };
     drawWatermark();
