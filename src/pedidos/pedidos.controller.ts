@@ -76,21 +76,20 @@ export class PedidosController {
     try {
       const data = await this.pedidosService.findFactura(+id);
       const configuracion = await this.configuracionService.obtener();
+      const pdfBuffer = await this.facturaService.generarFacturaPDF({
+        ...data,
+        configuracion,
+      });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=factura-${id}.pdf`);
-      await this.facturaService.generarFacturaPDF(
-        { ...data, configuracion },
-        res,
-      );
+      res.end(pdfBuffer);
     } catch (err) {
-      if (!res.headersSent) {
-        console.error('Error generando factura PDF:', (err as Error).message);
-        res.status(500).json({
-          statusCode: 500,
-          message: 'Error al generar la factura PDF',
-          error: (err as Error).message,
-        });
-      }
+      console.error('Error generando factura PDF:', (err as Error).message);
+      res.status(500).json({
+        statusCode: 500,
+        message: 'Error al generar la factura PDF',
+        error: (err as Error).message,
+      });
     }
   }
 
