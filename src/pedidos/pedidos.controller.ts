@@ -12,6 +12,7 @@ import {
   Req,
   ForbiddenException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PedidosService } from './pedidos.service';
 import { CrearPedidoDto } from './dto/crear-pedido.dto';
 import { ActualizarEstadoDto } from './dto/actualizar-estado.dto';
@@ -31,6 +32,7 @@ export class PedidosController {
     private readonly pedidosService: PedidosService,
     private readonly configuracionService: ConfiguracionService,
     private readonly facturaService: FacturaService,
+    private readonly jwtService: JwtService,
   ) {}
 
   @Get()
@@ -72,8 +74,30 @@ export class PedidosController {
   }
 
   @Get(':id/factura/pdf')
-  async facturaPDF(@Param('id') id: string, @Res() res: Response) {
+  async facturaPDF(
+    @Param('id') id: string,
+    @Query('token') qToken: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.replace('Bearer ', '') || qToken || '';
+      if (!token) {
+        return res.status(401).json({
+          statusCode: 401,
+          message: 'Token de autenticación requerido',
+        });
+      }
+      try {
+        const payload = this.jwtService.verify(token);
+        (req as any).user = payload;
+      } catch {
+        return res.status(401).json({
+          statusCode: 401,
+          message: 'Token inválido o expirado',
+        });
+      }
       const data = await this.pedidosService.findFactura(+id);
       const configuracion = await this.configuracionService.obtener();
       const pdfBuffer = await this.facturaService.generarFacturaPDF({
@@ -86,11 +110,13 @@ export class PedidosController {
       res.end(pdfBuffer);
     } catch (err) {
       console.error('Error generando factura PDF:', (err as Error).message);
-      res.status(500).json({
-        statusCode: 500,
-        message: 'Error al generar la factura PDF',
-        error: (err as Error).message,
-      });
+      if (!res.headersSent) {
+        res.status(500).json({
+          statusCode: 500,
+          message: 'Error al generar la factura PDF',
+          error: (err as Error).message,
+        });
+      }
     }
   }
 
