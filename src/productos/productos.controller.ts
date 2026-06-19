@@ -27,8 +27,15 @@ export class ProductosController {
   constructor(private readonly productosService: ProductosService) {}
 
   @Get()
-  findAll(@Query('page') page?: string, @Query('limit') limit?: string, @Query('todos') todos?: string) {
-    return this.productosService.findAll(Number(page) || 1, Number(limit) || 50, todos === 'true');
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.productosService.findAll(Number(page) || 1, Number(limit) || 50);
+  }
+
+  @Get('admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'inventario')
+  findAllAdmin() {
+    return this.productosService.findAllInclusoInactivos();
   }
 
   @Get(':id')
